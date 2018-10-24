@@ -34,4 +34,5 @@ RUN cat ../interactive_face_detection_sample/main.cpp
 RUN /bin/bash -c "source ${vino_dir}/bin/setupvars.sh; cmake -DCMAKE_BUILD_TYPE=Release .."
 RUN /bin/bash -c "source ${vino_dir}/bin/setupvars.sh; make -j8 interactive_face_detection_sample"
 WORKDIR ${vino_dir}/deployment_tools/inference_engine/samples/build/intel64/Release
+RUN mkdir /data
 CMD /bin/bash -c "source ${vino_dir}/bin/setupvars.sh; fswebcam -r 640x480 --jpeg 85 -D 1 web-cam-shot.jpg; ./interactive_face_detection_sample -i web-cam-shot.jpg -m /opt/intel/computer_vision_sdk/deployment_tools/intel_models/face-detection-retail-0004/FP32/face-detection-retail-0004.xml -d CPU --no-show -r"

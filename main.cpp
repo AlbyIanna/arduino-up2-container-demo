@@ -1014,7 +1014,7 @@ int main(int argc, char *argv[]) {
             timer.finish("face analytics wait");
 
             // Visualize results.
-            if (!FLAGS_no_show) {
+            if (true) {
                 timer.start("visualization");
                 out.str("");
                 out << "OpenCV cap/render time: " << std::fixed << std::setprecision(2)
@@ -1105,7 +1105,18 @@ int main(int argc, char *argv[]) {
                     cv::rectangle(prev_frame, result.location, genderColor, 1);
                     i++;
                 }
-                cv::imshow("Detection results", prev_frame);
+                if (isFound) {
+                    std::vector<int> compression_params;
+                    compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
+                    compression_params.push_back(9);
+                    try {
+                        cv::imwrite("/data/detected_face.png", prev_frame, compression_params);
+                    }
+                    catch (std::runtime_error& ex) {
+                        fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
+                        return 1;
+                    }
+                }
                 timer.finish("visualization");
             } else if (FLAGS_r) {
                 // For every detected face.
@@ -1127,11 +1138,6 @@ int main(int argc, char *argv[]) {
                                   << HeadPose[i].angle_p << ";"
                                   << HeadPose[i].angle_r << std::endl;
                     }
-                }
-  	            if (isFound) {
-	          	    std::cout << "Trovato!" << std::endl;
-                } else {
-                    std::cout << "non trovato :/" << std::endl;
                 }
             }
 
