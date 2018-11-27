@@ -497,9 +497,10 @@ int main_function() {
           compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
           compression_params.push_back(9);
           try {
-              cv::imwrite("/home/upsquared/detected_face.png", frame, compression_params);
+              cv::imwrite("/tmp/node/detected_face.png", frame, compression_params);
               lastFound = millis();
               DebugSerial.println("file saved");
+              System.runShellCommand("curl -s -X POST http://localhost:32786/face-found");
           }
           catch (std::runtime_error& ex) {
               DebugSerial.println("failed to save file");
