@@ -39,7 +39,6 @@
 
 #include <common.hpp>
 
-#include "mkldnn/mkldnn_extension_ptr.hpp"
 #include <extension/ext_list.hpp>
 
 #include <opencv2/opencv.hpp>
