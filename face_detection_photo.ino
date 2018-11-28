@@ -44,7 +44,7 @@
 
 #include <common.hpp>
 
-#include "interactive_face_detection.hpp"
+#include "face_detection_photo.h"
 #include "mkldnn/mkldnn_extension_ptr.hpp"
 #include <extension/ext_list.hpp>
 
