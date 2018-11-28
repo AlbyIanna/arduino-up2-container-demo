@@ -508,38 +508,11 @@ int main_function() {
 
 
 void setup() {
-    main_function();
-}
-
-void loop() {
-  // put your main code here, to run repeatedly:
+  main_function();
   exit(0);
 }
 
-int runAsync(String command) {
-  return runAsyncPath(command, "/root");
-}
-
-int runAsyncPath(String command, char* path) {
-  Process p;
-  if(path!=NULL) {
-    p.changeDirectory(path);
-  }
-  p.runShellCommandAsynchronously(command);
-  while(p.running()) {
-    if(p.available()) {
-      DebugSerial.print((char)p.read());
-    }
-  }
-  return p.exitValue();
-}
-
-void checkError(int err, String errorMessage) {
-  if(err != 0) {
-    DebugSerial.println("\n.\n.\n.\nError: " + errorMessage + "\n\tTerminating sketch!\n\n");
-    exit(0);
-  }
-}
+void loop() {}
 
 void savePics() {
     std::vector<int> compression_params;
