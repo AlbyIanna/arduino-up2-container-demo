@@ -20,38 +20,8 @@
   \file object_detection_sample_ssd/main.cpp
   \example object_detection_sample_ssd/main.cpp
 */
-#include "Arduino.h"
-#undef min
-#undef max
-#undef round
-#undef DEFAULT
-
-#include <ArduinoOpenVINO.h>
-#include <functional>
-#include <iostream>
-#include <fstream>
-#include <random>
-#include <memory>
-#include <chrono>
-#include <vector>
-#include <string>
-#include <utility>
-#include <algorithm>
-#include <iterator>
-#include <map>
-
-#include <inference_engine.hpp>
-
-#include <common.hpp>
 
 #include "face_detection_photo.h"
-#include "mkldnn/mkldnn_extension_ptr.hpp"
-#include <extension/ext_list.hpp>
-
-#include <opencv2/opencv.hpp>
-#include "opencv2/core/core_c.h"
-#include "opencv2/highgui/highgui_c.h"
-
 using namespace InferenceEngine;
 
 /*
