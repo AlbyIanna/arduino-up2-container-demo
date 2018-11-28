@@ -73,12 +73,16 @@ std::string FLAGS_l = "";
 std::string FLAGS_c = "";
 bool FLAGS_pc = false;
 bool FLAGS_r = false;
-bool FLAGS_no_show = true;
+bool FLAGS_no_show = false;
 bool FLAGS_no_wait = false;
-double FLAGS_t = 0.5;
+double FLAGS_t = 0.9;
 bool isFound = false;
 int lastFound = 0;
-
+int picsTook = 0;
+int firstFoundInSeries = 0;
+bool picSeries = false;
+cv::Mat framesWithFaces [5];
+    
 template <typename T>
 void matU8ToBlob(const cv::Mat& orig_image, Blob::Ptr& blob, float scaleFactor = 1.0, int batchIndex = 0) {
   SizeVector blobSize = blob.get()->dims();
@@ -491,22 +495,23 @@ int main_function() {
         i++;
       }
       
-      if (isFound && (millis() - lastFound) > 5000) {
+      if (isFound) {
+        if ((millis() - lastFound) > 1000) {
+          if (!picSeries) {
+            firstFoundInSeries = millis();
+            picSeries = true;
+          }
           DebugSerial.println("FACE FOUND!");
-          std::vector<int> compression_params;
-          compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
-          compression_params.push_back(9);
-          try {
-              cv::imwrite("/tmp/node/detected_face.png", frame, compression_params);
-              lastFound = millis();
-              DebugSerial.println("file saved");
-              System.runShellCommand("curl -s -X POST http://localhost:32786/face-found");
-          }
-          catch (std::runtime_error& ex) {
-              DebugSerial.println("failed to save file");
-              fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
-              return 1;
-          }
+          framesWithFaces[picsTook++] = frame;
+          lastFound = millis();
+        }
+      }
+      
+      if (picSeries && (millis() - firstFoundInSeries) > 5000) {
+        picSeries = false;
+        savePics();
+        DebugSerial.println("mail sent");
+        System.runShellCommand("curl -s -X POST http://localhost:32786/face-found");
       }
       if (-1 != cv::waitKey(1))
         break;
@@ -556,4 +561,53 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   exit(0);
+}
+
+int runAsync(String command) {
+  return runAsyncPath(command, "/root");
+}
+
+int runAsyncPath(String command, char* path) {
+  Process p;
+  if(path!=NULL) {
+    p.changeDirectory(path);
+  }
+  p.runShellCommandAsynchronously(command);
+  while(p.running()) {
+    if(p.available()) {
+      DebugSerial.print((char)p.read());
+    }
+  }
+  return p.exitValue();
+}
+
+void checkError(int err, String errorMessage) {
+  if(err != 0) {
+    DebugSerial.println("\n.\n.\n.\nError: " + errorMessage + "\n\tTerminating sketch!\n\n");
+    exit(0);
+  }
+}
+
+void savePics() {
+    std::vector<int> compression_params;
+    compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
+    compression_params.push_back(9);
+    for (int i = 0; i < picsTook; i++) {
+      char fileName[50];
+      sprintf(fileName, "/tmp/node/detected_face_%d.png", i);
+      try {
+        cv::imwrite(fileName, framesWithFaces[i], compression_params);
+        DebugSerial.print("file ");
+        DebugSerial.print(fileName);
+        DebugSerial.println(" saved");
+      }
+      catch (std::runtime_error& ex) {
+        DebugSerial.print("failed to save file ");
+        DebugSerial.print(fileName);
+        fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
+        return;
+      }
+    }
+    picsTook = 0;
+    std::memset( framesWithFaces, 0, sizeof( framesWithFaces ) );
 }
