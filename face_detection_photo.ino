@@ -34,7 +34,6 @@ std::string FLAGS_i = "cam";
 std::string FLAGS_m = "/opt/intel/computer_vision_sdk/deployment_tools/intel_models/face-detection-retail-0004/FP16/face-detection-retail-0004.xml";
 std::string FLAGS_d = "GPU";
 std::string FLAGS_c = "";
-bool FLAGS_pc = false;
 bool FLAGS_r = false;
 bool FLAGS_no_show = false;
 bool FLAGS_no_wait = false;
@@ -116,13 +115,6 @@ struct BaseDetection {
       enablingChecked = true;
     }
     return _enabled;
-  }
-  void printPerformanceCounts() {
-    if (!enabled()) {
-      return;
-    }
-    std::cout << "[ INFO ] Performance counts for " << topoName << std::endl << std::endl;
-    ::printPerformanceCounts(request->GetPerformanceCounts(), std::cout, false);
   }
 };
 
@@ -382,14 +374,6 @@ int main_function() {
       pluginsForDevices[deviceName] = plugin;
     }
 
-    /** Per layer metrics **/
-    if (FLAGS_pc) {
-      for (auto && plugin : pluginsForDevices) {
-        plugin.second.SetConfig({{PluginConfigParams::KEY_PERF_COUNT, PluginConfigParams::YES}});
-      }
-    }
-
-
     // --------------------Load networks (Generated xml/bin files)-------------------------------------------
     Load(FaceDetection).into(pluginsForDevices[FLAGS_d]);
 
@@ -402,7 +386,6 @@ int main_function() {
     double ocv_decode_time = 0, ocv_render_time = 0;
     bool firstFrame = true;
     
-    /** Start inference & calc performance **/
     while (true) {
       /** requesting new frame if any*/
       cap.grab();
@@ -486,11 +469,6 @@ int main_function() {
       }
 
       firstFrame = false;
-    }
-
-    // ---------------------------Some perf data--------------------------------------------------
-    if (FLAGS_pc) {
-      FaceDetection.printPerformanceCounts();
     }
   }
   catch (const std::exception& error) {
