@@ -74,30 +74,30 @@ void matU8ToBlob(const cv::Mat& orig_image, Blob::Ptr& blob, float scaleFactor =
   }
 }
 
-// -------------------------Generic routines for detection networks-------------------------------------------------
-
-struct BaseDetection {
+struct FaceDetectionClass{
   ExecutableNetwork net;
   InferenceEngine::InferencePlugin * plugin;
   InferRequest::Ptr request;
   std::string & commandLineFlag;
   std::string topoName;
   const int maxBatch;
+  std::string input;
+  std::string output;
+  int maxProposalCount;
+  int objectSize;
+  int enquedFrames = 0;
+  float width = 0;
+  float height = 0;
+  bool resultsFetched = false;
+  std::vector<std::string> labels;
 
-  BaseDetection(std::string &commandLineFlag, std::string topoName, int maxBatch)
+  FaceDetectionClass(std::string &commandLineFlag, std::string topoName, int maxBatch)
     : commandLineFlag(commandLineFlag), topoName(topoName), maxBatch(maxBatch) {}
-
-  virtual ~BaseDetection() {}
 
   ExecutableNetwork* operator ->() {
     return &net;
   }
-  virtual InferenceEngine::CNNNetwork read()  = 0;
-
-  virtual void submitRequest() {
-    if (!enabled() || request == nullptr) return;
-    request->StartAsync();
-  }
+  // using operator=;
 
   virtual void wait() {
     if (!enabled() || !request) return;
@@ -116,19 +116,8 @@ struct BaseDetection {
     }
     return _enabled;
   }
-};
 
-struct FaceDetectionClass : BaseDetection {
-  std::string input;
-  std::string output;
-  int maxProposalCount;
-  int objectSize;
-  int enquedFrames = 0;
-  float width = 0;
-  float height = 0;
-  bool resultsFetched = false;
-  std::vector<std::string> labels;
-  using BaseDetection::operator=;
+  
 
   struct Result {
     int label;
@@ -138,12 +127,13 @@ struct FaceDetectionClass : BaseDetection {
 
   std::vector<Result> results;
 
-  void submitRequest() override {
+  void submitRequest() {
     if (!enquedFrames) return;
     enquedFrames = 0;
     resultsFetched = false;
     results.clear();
-    BaseDetection::submitRequest();
+    if (!enabled() || request == nullptr) return;
+    request->StartAsync();
   }
 
   void enqueue(const cv::Mat &frame) {
@@ -164,8 +154,8 @@ struct FaceDetectionClass : BaseDetection {
   }
 
 
-  FaceDetectionClass() : BaseDetection(FLAGS_m, "Face Detection", 1) {}
-  InferenceEngine::CNNNetwork read() override {
+  FaceDetectionClass() : FaceDetectionClass(FLAGS_m, "Face Detection", 1) {}
+  InferenceEngine::CNNNetwork read() {
     std::cout << "[ INFO ] Loading network files for Face Detection" << std::endl;
     InferenceEngine::CNNNetReader netReader;
     /** Read network model **/
@@ -284,8 +274,8 @@ struct FaceDetectionClass : BaseDetection {
 };
 
 struct Load {
-  BaseDetection& detector;
-  explicit Load(BaseDetection& detector) : detector(detector) { }
+  FaceDetectionClass& detector;
+  explicit Load(FaceDetectionClass& detector) : detector(detector) { }
 
   void into(InferenceEngine::InferencePlugin & plg) const {
     if (detector.enabled()) {
