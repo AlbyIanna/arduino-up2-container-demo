@@ -36,14 +36,10 @@ std::string FLAGS_m = "/opt/intel/computer_vision_sdk/deployment_tools/intel_mod
 std::string FLAGS_d = "GPU";
 bool showVideo = false;
 bool FLAGS_no_wait = false;
-double FLAGS_t = 0.9;
+double FLAGS_t = 0.95;
 bool isFound = false;
 int lastFound = 0;
-int picsTook = 0;
-int firstFoundInSeries = 0;
-bool picSeries = false;
-cv::Mat framesWithFaces [1];
-int framesWithFacesLength = sizeof(framesWithFaces)/sizeof(*framesWithFaces);
+cv::Mat frameWithFace;
     
 template <typename T>
 void matU8ToBlob(const cv::Mat& orig_image, Blob::Ptr& blob, float scaleFactor = 1.0, int batchIndex = 0) {
@@ -415,22 +411,13 @@ void detectFaces() {
     i++;
   }
   
-  if (isFound) {
-    if ((millis() - lastFound) > 1000) {
-      if (!picSeries) {
-        firstFoundInSeries = millis();
-        picSeries = true;
-      }
-      DebugSerial.println("FACE FOUND!");
-      framesWithFaces[picsTook++] = frame.clone();
-      lastFound = millis();
-    }
+  if (isFound && (millis() - lastFound) > 3000) {
+    DebugSerial.println("FACE FOUND!");
+    frameWithFace = frame.clone();
+    savePic();
+    lastFound = millis();
   }
   
-  if (picSeries && (millis() - firstFoundInSeries) > 5000 || picsTook >= framesWithFacesLength) {
-    picSeries = false;
-    savePics();
-  }
   if (-1 != cv::waitKey(1))
     return;
 
@@ -451,26 +438,22 @@ void detectFaces() {
   }
 }
 
-void savePics() {
+void savePic() {
   std::vector<int> compression_params;
   compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
   compression_params.push_back(9);
-  for (int i = 0; i < picsTook; i++) {
-    char fileName[50];
-    sprintf(fileName, "/home/upsquared/.node/detected_face_%d.png", i);
-    try {
-      cv::imwrite(fileName, framesWithFaces[i], compression_params);
-      DebugSerial.print("file ");
-      DebugSerial.print(fileName);
-      DebugSerial.println(" saved");
-    }
-    catch (std::runtime_error& ex) {
-      DebugSerial.print("failed to save file ");
-      DebugSerial.print(fileName);
-      fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
-      return;
-    }
+  char fileName [] = "/home/upsquared/.node/detected_face.png";
+  try {
+    cv::imwrite(fileName, frameWithFace, compression_params);
+    System.runShellCommand("echo '+' >> /home/upsquared/.node/bait.lock");
+    DebugSerial.print("file ");
+    DebugSerial.print(fileName);
+    DebugSerial.println(" saved");
   }
-  picsTook = 0;
-  std::memset( framesWithFaces, 0, sizeof( framesWithFaces ) );
+  catch (std::runtime_error& ex) {
+    DebugSerial.print("failed to save file ");
+    DebugSerial.print(fileName);
+    fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
+    return;
+  }
 }
