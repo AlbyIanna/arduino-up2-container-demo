@@ -27,7 +27,10 @@ using namespace InferenceEngine;
 
 // CHANGE THE user VARIABLE ACCORDING TO THE USER RUNNING ON YOUR OS 
 String user = "upsquared";
-
+cv::VideoCapture cap;
+cv::Mat frame;
+double ocv_decode_time = 0, ocv_render_time = 0;
+typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
 std::string inputFile = "cam";
 std::string FLAGS_m = "/opt/intel/computer_vision_sdk/deployment_tools/intel_models/face-detection-retail-0004/FP16/face-detection-retail-0004.xml";
 std::string FLAGS_d = "GPU";
@@ -39,7 +42,8 @@ int lastFound = 0;
 int picsTook = 0;
 int firstFoundInSeries = 0;
 bool picSeries = false;
-cv::Mat framesWithFaces [5];
+cv::Mat framesWithFaces [1];
+int framesWithFacesLength = sizeof(framesWithFaces)/sizeof(*framesWithFaces);
     
 template <typename T>
 void matU8ToBlob(const cv::Mat& orig_image, Blob::Ptr& blob, float scaleFactor = 1.0, int batchIndex = 0) {
@@ -70,7 +74,7 @@ void matU8ToBlob(const cv::Mat& orig_image, Blob::Ptr& blob, float scaleFactor =
   }
 }
 
-struct FaceDetectionClass{
+struct FaceDetectionClass {
   struct Result {
     int label;
     float confidence;
@@ -256,6 +260,8 @@ struct FaceDetectionClass{
   }
 };
 
+FaceDetectionClass FaceDetection;
+
 struct Load {
   FaceDetectionClass& detector;
   explicit Load(FaceDetectionClass& detector) : detector(detector) { }
@@ -276,7 +282,7 @@ void switchUser(String user) {
   setgid(gid.toInt());
 }
 
-int main_function() {
+void setup() {
   try {
     switchUser(user);
     System.runShellCommand("DISPLAY=:0 xhost +si:localuser:root");
@@ -285,8 +291,6 @@ int main_function() {
 
     // -----------------------------Read input -----------------------------------------------------
     std::cout << "[ INFO ]  Reading input" << std::endl;
-    cv::VideoCapture cap;
-    const bool isCamera = inputFile == "cam";
 
     if (!(inputFile == "cam" ? cap.open(0) : cap.open(inputFile))) {
       throw std::logic_error("Cannot open input file or camera: " + inputFile);
@@ -295,7 +299,6 @@ int main_function() {
     const size_t height = (size_t) cap.get(CV_CAP_PROP_FRAME_HEIGHT);
 
     // read input (video) frame
-    cv::Mat frame;
     if (!cap.read(frame)) {
       throw std::logic_error("Failed to get frame from cv::VideoCapture");
     }
@@ -306,7 +309,6 @@ int main_function() {
       {FLAGS_d, FLAGS_m}, {}, {}
     };
 
-    FaceDetectionClass FaceDetection;
 
     std::string ld_path =  std::string(getenv("LD_LIBRARY_PATH"));
     std::vector<std::string> paths;
@@ -353,139 +355,122 @@ int main_function() {
 
     // ----------------------------Do inference-------------------------------------------------------------
     std::cout << "[ INFO ]  Start inference " << std::endl;
-    typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
-    auto wallclock = std::chrono::high_resolution_clock::now();
-
-    double ocv_decode_time = 0, ocv_render_time = 0;
-    bool firstFrame = true;
-    
-    while (true) {
-      /** requesting new frame if any*/
-      cap.grab();
-
-      auto t0 = std::chrono::high_resolution_clock::now();
-      FaceDetection.enqueue(frame);
-      auto t1 = std::chrono::high_resolution_clock::now();
-      ocv_decode_time = std::chrono::duration_cast<ms>(t1 - t0).count();
-      FaceDetection.submitRequest();
-      FaceDetection.wait();
-
-      FaceDetection.fetchResults();
-
-      // ----------------------------Processing outputs-----------------------------------------------------
-      std::ostringstream out;
-      out << "OpenCV cap/render time: " << std::fixed << std::setprecision(2)
-          << (ocv_decode_time + ocv_render_time) << " ms";
-      cv::putText(frame, out.str(), cv::Point2f(0, 25), cv::FONT_HERSHEY_TRIPLEX, 0.5, cv::Scalar(255, 0, 0));
-
-      out.str("");
-      cv::putText(frame, out.str(), cv::Point2f(0, 45), cv::FONT_HERSHEY_TRIPLEX, 0.5,
-                  cv::Scalar(255, 0, 0));
-
-      int i = 0;
-      for (auto & result : FaceDetection.results) {
-        cv::Rect rect = result.location;
-
-        out.str("");
-
-        out << (result.label < FaceDetection.labels.size() ? FaceDetection.labels[result.label] :
-                std::string("label #") + std::to_string(result.label))
-            << ": " << std::fixed << std::setprecision(3) << result.confidence;
-
-        cv::putText(frame,
-                    out.str(),
-                    cv::Point2f(result.location.x, result.location.y - 15),
-                    cv::FONT_HERSHEY_COMPLEX_SMALL,
-                    1.2,
-                    cv::Scalar(0, 0, 255));
-
-        cv::rectangle(frame, result.location, cv::Scalar(147, 20, 255), 3);
-
-        i++;
-      }
-      
-      if (isFound) {
-        if ((millis() - lastFound) > 1000) {
-          if (!picSeries) {
-            firstFoundInSeries = millis();
-            picSeries = true;
-          }
-          DebugSerial.println("FACE FOUND!");
-          framesWithFaces[picsTook++] = frame;
-          lastFound = millis();
-        }
-      }
-      
-      if (picSeries && (millis() - firstFoundInSeries) > 5000) {
-        picSeries = false;
-        savePics();
-        System.runShellCommand("curl -s -X POST http://localhost:32768/face-found");
-        DebugSerial.println("mail sent");
-      }
-      if (-1 != cv::waitKey(1))
-        break;
-
-      t0 = std::chrono::high_resolution_clock::now();
-      if (!showVideo) {
-        cv::imshow("Detection results", frame);
-      }
-      t1 = std::chrono::high_resolution_clock::now();
-      ocv_render_time = std::chrono::duration_cast<ms>(t1 - t0).count();
-
-      // end of file, for single frame file, like image we just keep it displayed to let user check what was shown
-      if (!cap.retrieve(frame)) {
-        if (!FLAGS_no_wait) {
-          std::cout << "[ INFO ]  Press any key to exit" << std::endl;
-          cv::waitKey(0);
-        }
-        break;
-      }
-
-      firstFrame = false;
-    }
   }
   catch (const std::exception& error) {
     std::cerr << "[ ERROR ] " << error.what() << std::endl;
-    return 1;
+    return;
   }
   catch (...) {
     std::cerr << "[ ERROR ] Unknown/internal exception happened." << std::endl;
-    return 1;
+    return;
   }
-
-  std::cout << "[ INFO ] Execution successful" << std::endl;
-  return 0;
 }
 
-
-void setup() {
-  main_function();
-  exit(0);
+void loop() {
+  detectFaces();
 }
 
-void loop() {}
+void detectFaces() {
+    /** requesting new frame if any*/
+  cap.grab();
+
+  auto t0 = std::chrono::high_resolution_clock::now();
+  FaceDetection.enqueue(frame);
+  auto t1 = std::chrono::high_resolution_clock::now();
+  ocv_decode_time = std::chrono::duration_cast<ms>(t1 - t0).count();
+  FaceDetection.submitRequest();
+  FaceDetection.wait();
+
+  FaceDetection.fetchResults();
+
+  // ----------------------------Processing outputs-----------------------------------------------------
+  std::ostringstream out;
+  out << "OpenCV cap/render time: " << std::fixed << std::setprecision(2)
+      << (ocv_decode_time + ocv_render_time) << " ms";
+  cv::putText(frame, out.str(), cv::Point2f(0, 25), cv::FONT_HERSHEY_TRIPLEX, 0.5, cv::Scalar(255, 0, 0));
+
+  out.str("");
+  cv::putText(frame, out.str(), cv::Point2f(0, 45), cv::FONT_HERSHEY_TRIPLEX, 0.5,
+              cv::Scalar(255, 0, 0));
+
+  int i = 0;
+  for (auto & result : FaceDetection.results) {
+    cv::Rect rect = result.location;
+
+    out.str("");
+
+    out << (result.label < FaceDetection.labels.size() ? FaceDetection.labels[result.label] :
+            std::string("label #") + std::to_string(result.label))
+        << ": " << std::fixed << std::setprecision(3) << result.confidence;
+
+    cv::putText(frame,
+                out.str(),
+                cv::Point2f(result.location.x, result.location.y - 15),
+                cv::FONT_HERSHEY_COMPLEX_SMALL,
+                1.2,
+                cv::Scalar(0, 0, 255));
+
+    cv::rectangle(frame, result.location, cv::Scalar(147, 20, 255), 3);
+
+    i++;
+  }
+  
+  if (isFound) {
+    if ((millis() - lastFound) > 1000) {
+      if (!picSeries) {
+        firstFoundInSeries = millis();
+        picSeries = true;
+      }
+      DebugSerial.println("FACE FOUND!");
+      framesWithFaces[picsTook++] = frame.clone();
+      lastFound = millis();
+    }
+  }
+  
+  if (picSeries && (millis() - firstFoundInSeries) > 5000 || picsTook >= framesWithFacesLength) {
+    picSeries = false;
+    savePics();
+  }
+  if (-1 != cv::waitKey(1))
+    return;
+
+  t0 = std::chrono::high_resolution_clock::now();
+  if (!showVideo) {
+    cv::imshow("Detection results", frame);
+  }
+  t1 = std::chrono::high_resolution_clock::now();
+  ocv_render_time = std::chrono::duration_cast<ms>(t1 - t0).count();
+
+  // end of file, for single frame file, like image we just keep it displayed to let user check what was shown
+  if (!cap.retrieve(frame)) {
+    if (!FLAGS_no_wait) {
+      std::cout << "[ INFO ]  Press any key to exit" << std::endl;
+      cv::waitKey(0);
+    }
+    return;
+  }
+}
 
 void savePics() {
-    std::vector<int> compression_params;
-    compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
-    compression_params.push_back(9);
-
-    for (int i = 0; i < picsTook; i++) {
-      char fileName[50];
-      sprintf(fileName, "/home/upsquared/.node/detected_face_%d.png", i);
-      try {
-        cv::imwrite(fileName, framesWithFaces[i], compression_params);
-        DebugSerial.print("file ");
-        DebugSerial.print(fileName);
-        DebugSerial.println(" saved");
-      }
-      catch (std::runtime_error& ex) {
-        DebugSerial.print("failed to save file ");
-        DebugSerial.print(fileName);
-        fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
-        return;
-      }
+  std::vector<int> compression_params;
+  compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
+  compression_params.push_back(9);
+  for (int i = 0; i < picsTook; i++) {
+    char fileName[50];
+    sprintf(fileName, "/home/upsquared/.node/detected_face_%d.png", i);
+    try {
+      cv::imwrite(fileName, framesWithFaces[i], compression_params);
+      DebugSerial.print("file ");
+      DebugSerial.print(fileName);
+      DebugSerial.println(" saved");
     }
-    picsTook = 0;
-    // std::memset( framesWithFaces, 0, sizeof( framesWithFaces ) );
+    catch (std::runtime_error& ex) {
+      DebugSerial.print("failed to save file ");
+      DebugSerial.print(fileName);
+      fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
+      return;
+    }
+  }
+  picsTook = 0;
+  std::memset( framesWithFaces, 0, sizeof( framesWithFaces ) );
 }
