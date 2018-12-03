@@ -29,13 +29,10 @@ using namespace InferenceEngine;
 // CHANGE THE user VARIABLE ACCORDING TO THE USER RUNNING ON YOUR OS 
 String user = "upsquared";
 
-std::string FLAGS_i = "cam";
-
+std::string inputFile = "cam";
 std::string FLAGS_m = "/opt/intel/computer_vision_sdk/deployment_tools/intel_models/face-detection-retail-0004/FP16/face-detection-retail-0004.xml";
 std::string FLAGS_d = "GPU";
-std::string FLAGS_c = "";
-bool FLAGS_r = false;
-bool FLAGS_no_show = false;
+bool showVideo = false;
 bool FLAGS_no_wait = false;
 double FLAGS_t = 0.9;
 bool isFound = false;
@@ -78,7 +75,6 @@ struct FaceDetectionClass{
   ExecutableNetwork net;
   InferenceEngine::InferencePlugin * plugin;
   InferRequest::Ptr request;
-  std::string & commandLineFlag;
   std::string topoName;
   const int maxBatch;
   std::string input;
@@ -91,8 +87,8 @@ struct FaceDetectionClass{
   bool resultsFetched = false;
   std::vector<std::string> labels;
 
-  FaceDetectionClass(std::string &commandLineFlag, std::string topoName, int maxBatch)
-    : commandLineFlag(commandLineFlag), topoName(topoName), maxBatch(maxBatch) {}
+  FaceDetectionClass(std::string topoName, int maxBatch)
+    : topoName(topoName), maxBatch(maxBatch) {}
 
   ExecutableNetwork* operator ->() {
     return &net;
@@ -108,7 +104,7 @@ struct FaceDetectionClass{
 
   bool enabled() const  {
     if (!enablingChecked) {
-      _enabled = !commandLineFlag.empty();
+      _enabled = true;
       if (!_enabled) {
         std::cout << "[ INFO ] " << topoName << " DISABLED" << std::endl;
       }
@@ -154,7 +150,7 @@ struct FaceDetectionClass{
   }
 
 
-  FaceDetectionClass() : FaceDetectionClass(FLAGS_m, "Face Detection", 1) {}
+  FaceDetectionClass() : FaceDetectionClass("Face Detection", 1) {}
   InferenceEngine::CNNNetwork read() {
     std::cout << "[ INFO ] Loading network files for Face Detection" << std::endl;
     InferenceEngine::CNNNetReader netReader;
@@ -260,14 +256,6 @@ struct FaceDetectionClass{
       }
       
       isFound = true;
-      if (FLAGS_r) {
-
-        std::cout << "[" << i << "," << r.label << "] element, prob = " << r.confidence <<
-                  "    (" << r.location.x << "," << r.location.y << ")-(" << r.location.width << ","
-                  << r.location.height << ")"
-                  << ((r.confidence > FLAGS_t) ? " WILL BE RENDERED!" : "") << std::endl;
-      }
-
       results.push_back(r);
     }
   }
@@ -303,10 +291,10 @@ int main_function() {
     // -----------------------------Read input -----------------------------------------------------
     std::cout << "[ INFO ]  Reading input" << std::endl;
     cv::VideoCapture cap;
-    const bool isCamera = FLAGS_i == "cam";
+    const bool isCamera = inputFile == "cam";
 
-    if (!(FLAGS_i == "cam" ? cap.open(0) : cap.open(FLAGS_i))) {
-      throw std::logic_error("Cannot open input file or camera: " + FLAGS_i);
+    if (!(inputFile == "cam" ? cap.open(0) : cap.open(inputFile))) {
+      throw std::logic_error("Cannot open input file or camera: " + inputFile);
     }
     const size_t width  = (size_t) cap.get(CV_CAP_PROP_FRAME_WIDTH);
     const size_t height = (size_t) cap.get(CV_CAP_PROP_FRAME_HEIGHT);
@@ -443,7 +431,7 @@ int main_function() {
         break;
 
       t0 = std::chrono::high_resolution_clock::now();
-      if (!FLAGS_no_show) {
+      if (!showVideo) {
         cv::imshow("Detection results", frame);
       }
       t1 = std::chrono::high_resolution_clock::now();
