@@ -14,7 +14,6 @@
   // See the License for the specific language governing permissions and
   // limitations under the License.
 */
-
 #include "face_detection_photo.h"
 using namespace InferenceEngine;
 
@@ -72,6 +71,12 @@ void matU8ToBlob(const cv::Mat& orig_image, Blob::Ptr& blob, float scaleFactor =
 }
 
 struct FaceDetectionClass{
+  struct Result {
+    int label;
+    float confidence;
+    cv::Rect location;
+  };
+  std::vector<Result> results;
   ExecutableNetwork net;
   InferenceEngine::InferencePlugin * plugin;
   InferRequest::Ptr request;
@@ -81,7 +86,7 @@ struct FaceDetectionClass{
   std::string output;
   int maxProposalCount;
   int objectSize;
-  int enquedFrames = 0;
+  bool enquedFrames = false;
   float width = 0;
   float height = 0;
   bool resultsFetched = false;
@@ -113,19 +118,9 @@ struct FaceDetectionClass{
     return _enabled;
   }
 
-  
-
-  struct Result {
-    int label;
-    float confidence;
-    cv::Rect location;
-  };
-
-  std::vector<Result> results;
-
   void submitRequest() {
     if (!enquedFrames) return;
-    enquedFrames = 0;
+    enquedFrames = false;
     resultsFetched = false;
     results.clear();
     if (!enabled() || request == nullptr) return;
@@ -146,7 +141,7 @@ struct FaceDetectionClass{
 
     matU8ToBlob<uint8_t >(frame, inputBlob);
 
-    enquedFrames = 1;
+    enquedFrames = true;
   }
 
 
@@ -284,7 +279,7 @@ void switchUser(String user) {
 int main_function() {
   try {
     switchUser(user);
-
+    System.runShellCommand("DISPLAY=:0 xhost +si:localuser:root");
     /** This sample covers 3 certain topologies and cannot be generalized **/
     std::cout << "InferenceEngine: " << InferenceEngine::GetInferenceEngineVersion() << std::endl;
 
@@ -372,7 +367,7 @@ int main_function() {
       FaceDetection.enqueue(frame);
       auto t1 = std::chrono::high_resolution_clock::now();
       ocv_decode_time = std::chrono::duration_cast<ms>(t1 - t0).count();
-            FaceDetection.submitRequest();
+      FaceDetection.submitRequest();
       FaceDetection.wait();
 
       FaceDetection.fetchResults();
@@ -424,8 +419,8 @@ int main_function() {
       if (picSeries && (millis() - firstFoundInSeries) > 5000) {
         picSeries = false;
         savePics();
+        System.runShellCommand("curl -s -X POST http://localhost:32768/face-found");
         DebugSerial.println("mail sent");
-        System.runShellCommand("curl -s -X POST http://localhost:32786/face-found");
       }
       if (-1 != cv::waitKey(1))
         break;
@@ -474,9 +469,10 @@ void savePics() {
     std::vector<int> compression_params;
     compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
     compression_params.push_back(9);
+
     for (int i = 0; i < picsTook; i++) {
       char fileName[50];
-      sprintf(fileName, "/tmp/node/detected_face_%d.png", i);
+      sprintf(fileName, "/home/upsquared/.node/detected_face_%d.png", i);
       try {
         cv::imwrite(fileName, framesWithFaces[i], compression_params);
         DebugSerial.print("file ");
@@ -491,5 +487,5 @@ void savePics() {
       }
     }
     picsTook = 0;
-    std::memset( framesWithFaces, 0, sizeof( framesWithFaces ) );
+    // std::memset( framesWithFaces, 0, sizeof( framesWithFaces ) );
 }
