@@ -71,7 +71,7 @@ The first thing to do is to create a Thing that allows you to open a door when p
   ```
   That weird string should is my and only mine Thing's ID. Your sketch have a different string that is your and only yours Thing's ID, and you should never modify that. **If you modify it, the connection to the Cloud won't work**. If for some reason you lose it, you can find it in the URL of your Thing in [Arduino IoT Cloud](https://create.arduino.cc/cloud/things) (for example, the URL of my Thing is https://create.arduino.cc/cloud/things/93c68534-5b53-4876-bff8-64c562e03aa3/dashboard)
 - **Wire things up!** Connect the servo motor to pin 9  
-- Open the **Serial Monitor** clicking on **Monitor** on the left of the Arduino Create Editor, or press `CTRL + M`, and then **upload the sketch** to the MKR board clicking on the **UPLOAD** button above (right arrow symbol), or pressing `CTRL + U`. If you wrote everything correctly, the sketch will be compiled and uploaded to the board, and it should start printing some connection info in the serial monitor on the left. If anything goes wrong, the reason could be:
+- Make sure your MKR 1000 or MKR WIFI 1010 is selected in the dropdown above the sketch, open the **Serial Monitor** clicking on **Monitor** on the left of the Arduino Create Editor, or press `CTRL + M`, and then **upload the sketch** to the MKR board clicking on the **UPLOAD** button above (right arrow symbol), or pressing `CTRL + U`. If you wrote everything correctly, the sketch will be compiled and uploaded to the board, and it should start printing some connection info in the serial monitor on the left. If anything goes wrong, the reason could be:
   - It couldn't connect to the WiFi, for example because you inserted wrong credentials or the modem was too far away from the MKR board. Fix the problem and press the reset button or re-upload the sketch
   - It couldn't connect to Cloud, this could be tricky because there are various explainations. For example, sometimes it could fail to connect when the servo is attached to board and the board is powered by your computer. If this is the case, you can try to detach the servo and reset the board, or you can power your board by a wall socket (in this case you won't be able to see the serial monitor output). 
 - At a certain point the board should print `Successfully connected to Arduino Cloud :)` on the serial monitor. This means it's all set and you can play with it! Now go to [Arduino IoT Cloud](https://create.arduino.cc/cloud/things) and open your Thing, then click on the eye icon under the name of the Thing to open the **Dashboard**. From here you can monitor the values of its properties and even change them. If the board got connected you should see an ON/OFF button. C'mon, turn ON that switch and watch the Servo do the job. Cool right?
@@ -84,7 +84,7 @@ Now we are going to setup the UP SQUARED and deploy a Node-RED container
 - Open the **Containers** tab on the left. From here you can see the status of the containers on the board and deploy new ones. Click on **DEPLOY CONTAINER**. Fill the modal like this:
   - Container name: **MyNodeRedContainer** (you can choose another name if you want)
   - Image URL/Name: **nodered/node-red-docker**
-  - Volume Flags: **-v ~/.node-red:/data**
+  - Volume Flags: **-v /home/upsquared/.node-red:/data**
   - Port Binding: **-p 1880:32700**
   - Restart Policy: **unless-stopped**
   Click on **DEPLOY** and wait until it's done.
@@ -95,12 +95,12 @@ Now we are going to setup the UP SQUARED and deploy a Node-RED container
 
 .
 
-### Upload face detection sketch
+### Upload the face detection sketch
 The last step to take in order for this whole system to work is the core of the project: face detection!
 - Go to [Arduino Create Editor](https://create.arduino.cc/editor), and create a **NEW SKETCH** pressing on the button on the top left corner.
 - Delete the whole content of the new sketch, then copy/paste the content inside [face_detection_photo.ino](face_detection_photo/face_detection_photo.ino)
 - Make sure the **camera** is connected to the UP SQUARED
-- Finally, open the **Monitor** pressing `CTRL + M`, and upload the sketch pressing `CTRL + U`
+- Make sure your UP SQUARED is selected in the dropdown above the sketch, then open the **Monitor** pressing `CTRL + M`, and finally upload the sketch pressing `CTRL + U`
 - You should see some lines printed on the monitor telling that face detection is starting. Whene the string `[ INFO ]  Start inference` it means that the application is ready. If you move your face in front of the camera, you should see the string `FACE FOUND!`, and after a while you should receive a mail. Click on the link to the dashboard and the servomotor should rotate.
 
 ### Troubleshooting

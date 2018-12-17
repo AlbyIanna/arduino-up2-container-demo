@@ -58,7 +58,7 @@ typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
 std::string inputFile = "cam";
 std::string FLAGS_m = "/opt/intel/computer_vision_sdk/deployment_tools/intel_models/face-detection-retail-0004/FP16/face-detection-retail-0004.xml";
 std::string FLAGS_d = "GPU";
-bool showVideo = false;
+bool showVideo = true;
 bool FLAGS_no_wait = false;
 double FLAGS_t = 0.95;
 bool isFound = false;
@@ -446,30 +446,21 @@ void detectFaces() {
     return;
 
   t0 = std::chrono::high_resolution_clock::now();
-  if (!showVideo) {
+  if (showVideo) {
     cv::imshow("Detection results", frame);
   }
   t1 = std::chrono::high_resolution_clock::now();
   ocv_render_time = std::chrono::duration_cast<ms>(t1 - t0).count();
-
-  // end of file, for single frame file, like image we just keep it displayed to let user check what was shown
-  if (!cap.retrieve(frame)) {
-    if (!FLAGS_no_wait) {
-      std::cout << "[ INFO ]  Press any key to exit" << std::endl;
-      cv::waitKey(0);
-    }
-    return;
-  }
 }
 
 void savePic() {
   std::vector<int> compression_params;
   compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
   compression_params.push_back(9);
-  char fileName [] = "/home/upsquared/.node/detected_face.png";
+  char fileName [] = "/home/upsquared/.node-red/detected_face.png";
   try {
     cv::imwrite(fileName, frameWithFace, compression_params);
-    System.runShellCommand("echo '+' >> /home/upsquared/.node/bait.lock");
+    System.runShellCommand("echo '+' >> /home/upsquared/.node-red/bait.lock");
     DebugSerial.print("file ");
     DebugSerial.print(fileName);
     DebugSerial.println(" saved");
