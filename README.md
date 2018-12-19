@@ -28,7 +28,7 @@ The first thing to do is to create a Thing that allows you to open a door when p
 - A modal will show up asking for **WiFi credentials**. Fill it with the WiFi name and password of the network to which the board will connect.
 - Then create a property clicking on the **+** sign on the right. In the name field insert `doorOpenStatus` (you could choose whatever name you like, just remember to modify the sketch accordingly later) and select the type **ON/OFF (Boolean)**, leave the rest as it is and click **CREATE**
 - Now click on **EDIT CODE** in order to auto-generate a sketch linked to the DoorGuy thing (the name of the sketch is the same as the name of the Thing followed by the current date). You will also be redirected to the [Arduino Create Editor](https://create.arduino.cc/editor/) with the auto-generated sketch open.
-- The auto-generated sketch has a file named `ArduinoCloudSettings.h` that deals with connecting the board to the WiFi and to the cloud and a file named `cloudProperties.h` that initializes the properties you created in Arduino IoT Cloud. Notice that everytime you create or delete properties and click on **EDIT CODE** the sketch will be auto-modified accordingly. In the **Secret** tab you can modify the WiFi credentials. In the main file (in my case `DoorGuy_dec14a.ino`) you can see a function called `onDoorOpenStatusChange()`: this one will be called everytime you modify the properties' value from the DoorGuy dashboard.
+- The auto-generated sketch has a file named `ArduinoCloudSettings.h` that deals with connecting the board to the WiFi and to the cloud and a file named `cloudProperties.h` that initializes the properties you created in Arduino IoT Cloud. Notice that every time you create or delete properties and click on **EDIT CODE** the sketch will be auto-modified accordingly. In the **Secret** tab you can modify the WiFi credentials. In the main file (in my case `DoorGuy_dec14a.ino`) you can see a function called `onDoorOpenStatusChange()`: this one will be called every time you modify the properties' value from the DoorGuy dashboard.
 - We are going to use the [Servo library](https://www.arduino.cc/en/Reference/Servo), so let's include it
   ```Arduino
   #include <Servo.h>
@@ -73,7 +73,7 @@ The first thing to do is to create a Thing that allows you to open a door when p
 - **Wire things up!** Connect the servo motor to pin 9  
 - Make sure your MKR 1000 or MKR WIFI 1010 is selected in the dropdown above the sketch, open the **Serial Monitor** clicking on **Monitor** on the left of the Arduino Create Editor, or press `CTRL + M`, and then **upload the sketch** to the MKR board clicking on the **UPLOAD** button above (right arrow symbol), or pressing `CTRL + U`. If you wrote everything correctly, the sketch will be compiled and uploaded to the board, and it should start printing some connection info in the serial monitor on the left. If anything goes wrong, the reason could be:
   - It couldn't connect to the WiFi, for example because you inserted wrong credentials or the modem was too far away from the MKR board. Fix the problem and press the reset button or re-upload the sketch
-  - It couldn't connect to Cloud, this could be tricky because there are various explainations. For example, sometimes it could fail to connect when the servo is attached to board and the board is powered by your computer. If this is the case, you can try to detach the servo and reset the board, or you can power your board by a wall socket (in this case you won't be able to see the serial monitor output). 
+  - It couldn't connect to Cloud, this could be tricky because there are various explanations. For example, sometimes it could fail to connect when the servo is attached to board and the board is powered by your computer. If this is the case, you can try to detach the servo and reset the board, or you can power your board by a wall socket (in this case you won't be able to see the serial monitor output). 
 - At a certain point the board should print `Successfully connected to Arduino Cloud :)` on the serial monitor. This means it's all set and you can play with it! Now go to [Arduino IoT Cloud](https://create.arduino.cc/cloud/things) and open your Thing, then click on the eye icon under the name of the Thing to open the **Dashboard**. From here you can monitor the values of its properties and even change them. If the board got connected you should see an ON/OFF button. C'mon, turn ON that switch and watch the Servo do the job. Cool right?
 
 ### Deploy Node-RED container
@@ -84,7 +84,7 @@ Now we are going to setup the UP SQUARED and deploy a Node-RED container
 - Open the **Containers** tab on the left. From here you can see the status of the containers on the board and deploy new ones. Click on **DEPLOY CONTAINER**. Fill the modal like this:
   - Container name: **MyNodeRedContainer** (you can choose another name if you want)
   - Image URL/Name: **nodered/node-red-docker**
-  - Volume Flags: **-v /home/upsquared/.node-red:/data**
+  - Volume Flags: **-v /tmp:/data**
   - Port Binding: **-p 1880:32700**
   - Restart Policy: **unless-stopped**
   Click on **DEPLOY** and wait until it's done.
@@ -93,7 +93,6 @@ Now we are going to setup the UP SQUARED and deploy a Node-RED container
 - Now you have to configure the flow so that will receive an e-mail at your preferred address. Copy the URL of your Thing's dashboard from [Arduino IoT Cloud](https://create.arduino.cc/cloud), then double-click on the **Compose e-mail** node and paste the copied URL inside the variable `dashboardUrl`. Now double-click on the mail node and insert the recipient address in the **To** field, and the sender address and password in the **Userid** and **Password** fields respectively (you may have to [Let less secure apps access your account](https://support.google.com/accounts/answer/6010255?hl=en))
 - Finally click on **Deploy** in the upper-right corner. Now the container will wait until a photo in a certain path will be taken and then it will send a mail to the recipient address.
 
-.
 
 ### Upload the face detection sketch
 The last step to take in order for this whole system to work is the core of the project: face detection!
@@ -101,11 +100,11 @@ The last step to take in order for this whole system to work is the core of the 
 - Delete the whole content of the new sketch, then copy/paste the content inside [face_detection_photo.ino](face_detection_photo/face_detection_photo.ino)
 - Make sure the **camera** is connected to the UP SQUARED
 - Make sure your UP SQUARED is selected in the dropdown above the sketch, then open the **Monitor** pressing `CTRL + M`, and finally upload the sketch pressing `CTRL + U`
-- You should see some lines printed on the monitor telling that face detection is starting. Whene the string `[ INFO ]  Start inference` it means that the application is ready. If you move your face in front of the camera, you should see the string `FACE FOUND!`, and after a while you should receive a mail. Click on the link to the dashboard and the servomotor should rotate.
+- You should see some lines printed on the monitor telling that face detection is starting. When the string `[ INFO ]  Start inference` it means that the application is ready. If you move your face in front of the camera, you should see the string `FACE FOUND!`, and after a while you should receive a mail. Click on the link to the dashboard and the servomotor should rotate.
 
 ### Troubleshooting
 So now the camera can detect faces and everything should be set up to send a mail when that happens, so that you can press the button on the Thing's dashboard and open the door. If anything isn't working, make sure that:
-- the MKR 1000 or MKR 1010 is connected to the cloud, if not should reset it or reupload the sketch
+- the MKR 1000 or MKR 1010 is connected to the cloud, if not should reset it or re-upload the sketch
 - the UP SQUARED is connected to the Internet and you see it online on [Arduino Device Manager](https://create.arduino.cc/devices/)
 - the Node-RED container is up and running. You can see its status on the **Containers** tab of your UP SQUARED on [Arduino Device Manager](https://create.arduino.cc/devices/)
 - the Node-RED flow is deployed. If not sure, go to `UP_SQUARED_IP_ADDRESS:32700`, make sure every value is set up correctly and click on **Deploy**. Here you can also see if there were errors sending the mail, if the page is up when a face is found.
