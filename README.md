@@ -13,10 +13,14 @@ First we are going to create the **door-opening Thing** and control it with a **
 With all this set up, it will result in a camera that takes a picture when detects a face, which will be sent via mail by the Node-RED container, so that the mail will contain the picture and a link to the Arduino IoT dashboard, where you can push a button to open the door.
 
 ### Requirements
-- Arduino [MKR WiFi 1010](https://store.arduino.cc/arduino-mkr-wifi-1010) or [MKR 1000](https://store.arduino.cc/arduino-mkr1000)
-- [UP Squared AI Vision Developer Kit](https://up-shop.org/home/243-up-squared-ai-vision-dev-kit.html)
-- a Servomotor
 - an [Arduino Create](https://create.arduino.cc/) account. If you don't have one, [you can create it now](https://auth.arduino.cc/login/), it's free :)
+- Arduino [MKR WiFi 1010](https://store.arduino.cc/arduino-mkr-wifi-1010) or [MKR 1000](https://store.arduino.cc/arduino-mkr1000)
+![mkr1010](https://user-images.githubusercontent.com/6939054/50213671-914cc180-037e-11e9-9e34-2f64deddd7ee.jpg)
+
+- [UP Squared AI Vision Developer Kit](https://up-shop.org/home/243-up-squared-ai-vision-dev-kit.html)
+![up-squared](https://user-images.githubusercontent.com/6939054/50213781-dec92e80-037e-11e9-889a-69e1aa0f01bb.png)
+- [Digital Continuous Rotation (360) Servo](https://store.arduino.cc/digital-continuous-rotation-360-servo) or another servo
+![servo_continuous](https://user-images.githubusercontent.com/6939054/50213672-914cc180-037e-11e9-85f3-c2c3356408b8.jpg)
 
 You won't need any prior experience with any of the tool used in this tutorial.
 
@@ -75,6 +79,7 @@ The first thing to do is to create a Thing that allows you to open a door when p
   - It couldn't connect to the WiFi, for example because you inserted wrong credentials or the modem was too far away from the MKR board. Fix the problem and press the reset button or re-upload the sketch
   - It couldn't connect to Cloud, this could be tricky because there are various explanations. For example, sometimes it could fail to connect when the servo is attached to board and the board is powered by your computer. If this is the case, you can try to detach the servo and reset the board, or you can power your board by a wall socket (in this case you won't be able to see the serial monitor output). 
 - At a certain point the board should print `Successfully connected to Arduino Cloud :)` on the serial monitor. This means it's all set and you can play with it! Now go to [Arduino IoT Cloud](https://create.arduino.cc/cloud/things) and open your Thing, then click on the eye icon under the name of the Thing to open the **Dashboard**. From here you can monitor the values of its properties and even change them. If the board got connected you should see an ON/OFF button. C'mon, turn ON that switch and watch the Servo do the job. Cool right?
+![cloud-open-door](https://user-images.githubusercontent.com/6939054/50213667-90b42b00-037e-11e9-8ffc-50fb41167f35.png)
 
 ### Deploy Node-RED container
 Now we are going to setup the UP SQUARED and deploy a Node-RED container
@@ -92,6 +97,7 @@ Now we are going to setup the UP SQUARED and deploy a Node-RED container
 - Click on the menu on the upper-right corner, then **Import > Clipboard**, paste the content of [flows.json](node-red/flows.json) and click **Import**.
 - Now you have to configure the flow so that will receive an e-mail at your preferred address. Copy the URL of your Thing's dashboard from [Arduino IoT Cloud](https://create.arduino.cc/cloud), then double-click on the **Compose e-mail** node and paste the copied URL inside the variable `dashboardUrl`. Now double-click on the mail node and insert the recipient address in the **To** field, and the sender address and password in the **Userid** and **Password** fields respectively (you may have to [Let less secure apps access your account](https://support.google.com/accounts/answer/6010255?hl=en))
 - Finally click on **Deploy** in the upper-right corner. Now the container will wait until a photo in a certain path will be taken and then it will send a mail to the recipient address.
+![node-red-mail-flow](https://user-images.githubusercontent.com/6939054/50214185-e63d0780-037f-11e9-9497-8717c6f6ee57.png)
 
 
 ### Upload the face detection sketch
@@ -101,11 +107,15 @@ The last step to take in order for this whole system to work is the core of the 
 - Make sure the **camera** is connected to the UP SQUARED
 - Make sure your UP SQUARED is selected in the dropdown above the sketch, then open the **Monitor** pressing `CTRL + M`, and finally upload the sketch pressing `CTRL + U`
 - You should see some lines printed on the monitor telling that face detection is starting. When the string `[ INFO ]  Start inference` it means that the application is ready. If you move your face in front of the camera, you should see the string `FACE FOUND!`, and after a while you should receive a mail. Click on the link to the dashboard and the servomotor should rotate.
+![create-editor-face-detection-sketch](https://user-images.githubusercontent.com/6939054/50214410-901c9400-0380-11e9-8962-e34cdc048663.png)
+![node-red-mail-flow](https://user-images.githubusercontent.com/6939054/50214185-e63d0780-037f-11e9-9497-8717c6f6ee57.png)
 
 ### Troubleshooting
 So now the camera can detect faces and everything should be set up to send a mail when that happens, so that you can press the button on the Thing's dashboard and open the door. If anything isn't working, make sure that:
 - the MKR 1000 or MKR 1010 is connected to the cloud, if not should reset it or re-upload the sketch
 - the UP SQUARED is connected to the Internet and you see it online on [Arduino Device Manager](https://create.arduino.cc/devices/)
 - the Node-RED container is up and running. You can see its status on the **Containers** tab of your UP SQUARED on [Arduino Device Manager](https://create.arduino.cc/devices/)
+![device-manager-node-red-container](https://user-images.githubusercontent.com/6939054/50213669-914cc180-037e-11e9-9ff7-659668073245.png)
 - the Node-RED flow is deployed. If not sure, go to `UP_SQUARED_IP_ADDRESS:32700`, make sure every value is set up correctly and click on **Deploy**. Here you can also see if there were errors sending the mail, if the page is up when a face is found.
 - the face detection sketch is running. You can check its status on the **Sketches** tab of your UP SQUARED on [Arduino Device Manager](https://create.arduino.cc/devices/)
+![device-manager-face-detection-sketch](https://user-images.githubusercontent.com/6939054/50213668-90b42b00-037e-11e9-836a-5d0e4f6f164d.png)
