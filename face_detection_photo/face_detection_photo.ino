@@ -457,10 +457,10 @@ void savePic() {
   std::vector<int> compression_params;
   compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
   compression_params.push_back(9);
-  char fileName [] = "/home/upsquared/.node-red/detected_face.png";
+  char fileName [] = "/tmp/detected_face.png";
   try {
     cv::imwrite(fileName, frameWithFace, compression_params);
-    System.runShellCommand("echo '+' >> /home/upsquared/.node-red/bait.lock");
+    System.runShellCommand("echo '+' >> /tmp/bait.lock");
     DebugSerial.print("file ");
     DebugSerial.print(fileName);
     DebugSerial.println(" saved");
