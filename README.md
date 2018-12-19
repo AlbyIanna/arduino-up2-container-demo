@@ -108,7 +108,7 @@ The last step to take in order for this whole system to work is the core of the 
 - Make sure your UP SQUARED is selected in the dropdown above the sketch, then open the **Monitor** pressing `CTRL + M`, and finally upload the sketch pressing `CTRL + U`
 - You should see some lines printed on the monitor telling that face detection is starting. When the string `[ INFO ]  Start inference` it means that the application is ready. If you move your face in front of the camera, you should see the string `FACE FOUND!`, and after a while you should receive a mail. Click on the link to the dashboard and the servomotor should rotate.
 ![create-editor-face-detection-sketch](https://user-images.githubusercontent.com/6939054/50214410-901c9400-0380-11e9-8962-e34cdc048663.png)
-![node-red-mail-flow](https://user-images.githubusercontent.com/6939054/50214185-e63d0780-037f-11e9-9497-8717c6f6ee57.png)
+![mail-face-detected](https://user-images.githubusercontent.com/6939054/50213670-914cc180-037e-11e9-9496-0cfef76f0e0a.png)
 
 ### Troubleshooting
 So now the camera can detect faces and everything should be set up to send a mail when that happens, so that you can press the button on the Thing's dashboard and open the door. If anything isn't working, make sure that:
